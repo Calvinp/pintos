@@ -1,3 +1,4 @@
+#include "devices/timer.h"
 #include "threads/thread.h"
 #include <debug.h>
 #include <stddef.h>
@@ -23,6 +24,10 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+
+/* List of processes in THREAD_SLEEPING state sorted by time until
+   wake-up. Processes are added to this list when they fall asleep. */
+static struct list sleeping_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -331,6 +336,24 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/* Puts the current thread to sleep for given number of ticks. */
+void thread_sleep (int64_t ticks) { // ADDED BY US
+	printf("SLEEP");
+	struct thread *cur = thread_current();
+	printf("PASSED THREAD_CURRENT");
+	printf("%d", thread_current()->status);
+	enum intr_level old_level;
+
+	old_level = intr_disable();
+	if (cur != idle_thread) {
+		list_push_back (&sleeping_list, &cur->elem);
+		cur->status = THREAD_SLEEPING;
+		cur->wake_time = timer_ticks() + ticks;
+		schedule();
+	}
+	intr_set_level (old_level);
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
@@ -542,6 +565,32 @@ thread_schedule_tail (struct thread *prev)
     }
 }
 
+/*  Checks if any sleeping thread is ready to wake up. A thread is
+		ready to wake up if its wake_time is less than the current time,
+		as given by timer_ticks(). If a sleeping thread is ready to wake
+		up, change its status from THREAD_SLEEPING to THREAD_READY */
+static void
+wake_up_thread (void) // ADDED BY US
+{
+	struct list_elem *temp, *e = list_begin (&sleeping_list);
+	int64_t cur_ticks = timer_ticks();
+
+	while (e != list_end (&sleeping_list)) {
+		struct thread *t = list_entry (e, struct thread, allelem);
+		
+		if (cur_ticks >= t->wake_time) {
+			list_push_back (&ready_list, &t->elem); /* Wake this thread up! */
+			t->status = THREAD_READY;
+			temp = e;
+			e = list_next (e);
+			list_remove(temp); /* Remove this thread from sleeping_list */
+		}
+		else {
+			e = list_next (e);
+		}
+	}
+}
+
 /* Schedules a new process.  At entry, interrupts must be off and
    the running process's state must have been changed from
    running to some other state.  This function finds another
@@ -552,8 +601,13 @@ thread_schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
+	printf("HELLO schedule()");
+	wake_up_thread();
+
   struct thread *cur = running_thread ();
+	printf(" Current thread %d %d", cur->tid, cur->status);
   struct thread *next = next_thread_to_run ();
+  printf(" Next thread %d %d", cur->tid, cur->status);
   struct thread *prev = NULL;
 
   ASSERT (intr_get_level () == INTR_OFF);
