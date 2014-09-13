@@ -601,13 +601,10 @@ wake_up_thread (void) // ADDED BY US
 static void
 schedule (void) 
 {
-	printf("HELLO schedule()");
+  
 	wake_up_thread();
-
   struct thread *cur = running_thread ();
-	printf(" Current thread %d %d", cur->tid, cur->status);
   struct thread *next = next_thread_to_run ();
-  printf(" Next thread %d %d", cur->tid, cur->status);
   struct thread *prev = NULL;
 
   ASSERT (intr_get_level () == INTR_OFF);
