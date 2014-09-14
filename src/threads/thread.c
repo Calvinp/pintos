@@ -340,7 +340,6 @@ thread_foreach (thread_action_func *func, void *aux)
 /* Puts the current thread to sleep for given number of ticks. */
 void thread_sleep (int64_t ticks) { // ADDED BY US
 	struct thread *cur = thread_current();
-  printf("%d", is_thread (next_thread_to_run()));
 	enum intr_level old_level;
 
 	old_level = intr_disable();
@@ -572,10 +571,10 @@ static void
 wake_up_thread (void) // ADDED BY US
 {
 	struct list_elem *temp, *e = list_begin (&sleeping_list);
-	int64_t cur_ticks = 10;
+	int64_t cur_ticks = timer_ticks();
 
 	while (e != list_end (&sleeping_list)) {
-		struct thread *t = list_entry (e, struct thread, allelem);
+		struct thread *t = list_entry (e, struct thread, sleepelem);
 		
 		if (cur_ticks >= t->wake_time) {
 			list_push_back (&ready_list, &t->elem); /* Wake this thread up! */
