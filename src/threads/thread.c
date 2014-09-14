@@ -96,6 +96,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
+  list_init (&sleeping_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -338,15 +339,13 @@ thread_foreach (thread_action_func *func, void *aux)
 
 /* Puts the current thread to sleep for given number of ticks. */
 void thread_sleep (int64_t ticks) { // ADDED BY US
-	printf("SLEEP");
 	struct thread *cur = thread_current();
-	printf("PASSED THREAD_CURRENT");
-	printf("%d", thread_current()->status);
+  printf("%d", is_thread (next_thread_to_run()));
 	enum intr_level old_level;
 
 	old_level = intr_disable();
 	if (cur != idle_thread) {
-		list_push_back (&sleeping_list, &cur->elem);
+		list_push_back (&sleeping_list, &cur->sleepelem);
 		cur->status = THREAD_SLEEPING;
 		cur->wake_time = timer_ticks() + ticks;
 		schedule();
@@ -573,7 +572,7 @@ static void
 wake_up_thread (void) // ADDED BY US
 {
 	struct list_elem *temp, *e = list_begin (&sleeping_list);
-	int64_t cur_ticks = timer_ticks();
+	int64_t cur_ticks = 10;
 
 	while (e != list_end (&sleeping_list)) {
 		struct thread *t = list_entry (e, struct thread, allelem);
@@ -601,8 +600,8 @@ wake_up_thread (void) // ADDED BY US
 static void
 schedule (void) 
 {
-  
-	wake_up_thread();
+  wake_up_thread();
+
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
