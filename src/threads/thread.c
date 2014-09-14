@@ -337,6 +337,16 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+
+/* Compare the wake time of the two threads given by the list_elem. */ /* ADDED BY US */
+bool compare_wake_time(struct list_elem* a, struct list_elem* b, void *aux){
+	struct thread *ta = list_entry (a, struct thread, sleepelem);
+	struct thread *tb = list_entry (b, struct thread, sleepelem);
+	
+	return ta->wake_time > tb->wake_time;	
+}
+
+
 /* Puts the current thread to sleep for given number of ticks. */
 void thread_sleep (int64_t ticks) { // ADDED BY US
 	struct thread *cur = thread_current();
@@ -344,9 +354,9 @@ void thread_sleep (int64_t ticks) { // ADDED BY US
 
 	old_level = intr_disable();
 	if (cur != idle_thread) {
-		list_push_back (&sleeping_list, &cur->sleepelem);
 		cur->status = THREAD_SLEEPING;
 		cur->wake_time = timer_ticks() + ticks;
+		list_insert_ordered (&sleeping_list, &cur->sleepelem, &compare_wake_time, &(cur->wake_time));	
 		schedule();
 	}
 	intr_set_level (old_level);
@@ -570,23 +580,23 @@ thread_schedule_tail (struct thread *prev)
 static void
 wake_up_thread (void) // ADDED BY US
 {
-	struct list_elem *temp, *e = list_begin (&sleeping_list);
-	int64_t cur_ticks = timer_ticks();
-
-	while (e != list_end (&sleeping_list)) {
-		struct thread *t = list_entry (e, struct thread, sleepelem);
-		
-		if (cur_ticks >= t->wake_time) {
-			list_push_back (&ready_list, &t->elem); /* Wake this thread up! */
-			t->status = THREAD_READY;
-			temp = e;
-			e = list_next (e);
-			list_remove(temp); /* Remove this thread from sleeping_list */
-		}
-		else {
-			e = list_next (e);
-		}
+	
+	if(list_empty(&sleeping_list)){
+		return;
 	}
+
+	struct list_elem *e = list_begin (&sleeping_list);
+	int64_t cur_ticks = timer_ticks();
+	struct thread *t = list_entry (e, struct thread, sleepelem);
+
+	if (cur_ticks >= t->wake_time) {
+		list_push_back (&ready_list, &t->elem); /* Wake this thread up! */
+		t->status = THREAD_READY;
+		/* t->wake_time = 0;    ADDED BY US */
+		list_remove(e);   /* Remove this thread from sleeping_list */
+		wake_up_thread();    /* Wakes up any other sleeping thread whose wake time has passed */ /* ADDED BY US */
+	}
+	
 }
 
 /* Schedules a new process.  At entry, interrupts must be off and

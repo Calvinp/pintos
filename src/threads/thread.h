@@ -143,4 +143,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+bool compare_wake_time(struct list_elem*, struct list_elem*, void *aux);
+
 #endif /* threads/thread.h */
