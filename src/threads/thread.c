@@ -338,12 +338,11 @@ thread_foreach (thread_action_func *func, void *aux)
 }
 
 
-/* Compare the wake time of the two threads given by the list_elem. */ /* ADDED BY US */
-bool compare_wake_time(struct list_elem* a, struct list_elem* b, void *aux){
+/* Compare the wake time of the two threads given by the list_elem. */ // ADDED BY US
+bool compare_wake_time(const struct list_elem* a, const struct list_elem* b, void *aux){
 	struct thread *ta = list_entry (a, struct thread, sleepelem);
 	struct thread *tb = list_entry (b, struct thread, sleepelem);
-	
-	return ta->wake_time > tb->wake_time;	
+	return ta->wake_time < tb->wake_time;	
 }
 
 
