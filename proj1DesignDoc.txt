@@ -30,10 +30,35 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+--------------thread.h-------------------------------------------
+
+struct thread
+  {
+    ...
+    struct list_elem sleepelem;         /* Added a list element member named sleepelem, which indentifies this thread in the sleeping list. */ 
+    int64_t wake_time;		        /* wake_time specifies the when the thread needs to wake up.   */ 
+    ....
+  };
+
+
+/* States in a thread's life cycle. */
+enum thread_status
+  {
+    ...
+    THREAD_SLEEPING,		       /* If a thread goes to sleep, it will get new status THREAD_SLEEPING */ 
+    ...
+  };
+--------------thread.c-------------------------------------------
+
+...
+static struct list sleeping_list;       /* Added a list named sleeping_list, which contains the threads which are sleeping for easy access. */ 
+...
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
+
 In timer_sleep(), we assert that interrupts are on. Then we call a new function, thread_sleep(ticks), located in thread.c.
 In thread_sleep, we find out the current thread then turn interrupts off so that we can complete the rest of the function atomicly. Then, we set the status of the thread to THREAD_SLEEPING, set its wake time to ticks seconds in the future, and insert it into the sleeping list. The sleeping list is sorted by how long until the thread wakes up; we insert the new thread in the proper place. 
 The timer interrupt handler calls thread_yield(), which schedules the next thread. That function looks through the sleeping list to see if a thread is ready to wake up, and wakes it up if so.
@@ -41,20 +66,27 @@ Waking a thread up, we set its state to THREAD_READY, then add it back to the re
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
-Since the sleeping list is sorted by the amount of time until the thread needs to wake up, we only have to check the first thread when checking if a thread on the list is ready to wake up.
+
+Since the sleeping list is sorted by the amount of time until the thread needs to wake up, we only have to check the first thread when checking if a thread on the list is  >> ready to wake up.
 
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
 
+We turn interrupts off before entering the critical section of timer_sleep where we modify the  sleeping list.
+
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+
+If timer interuppt occur during a call to timer_sleep(),it will not affect the call.We turn off the interrupt before modifying the sleeping list and turn interrupt on when the procedure of modifying sleeping list and scheduleing next thread is complete.
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+We chose this design because it minimizes the time required to schedule next ready thread. We also considered the design where sleeping list was not sorted,  hence making the insertion time O(1) but finding time O(n). Since insertion happens less often than search, the algorithm used by us is better because it makes search time O(1).
 
 			 PRIORITY SCHEDULING
 			 ===================
