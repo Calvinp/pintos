@@ -21,6 +21,8 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+typedef int64_t int14_t;
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -41,6 +43,10 @@ static struct thread *initial_thread;
 
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
+
+/* load_avg, system load average, estimates the average number of threads 
+   ready to run over the past minute. */
+static int14_t load_avg;
 
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
@@ -434,19 +440,28 @@ thread_get_nice (void)
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
-{
-  /* Not yet implemented. */
-  return 0;
+{ 
+  return load_avg;
+}
+
+/* Set the system load average value. */
+void thread_set_load_avg(void){
+   ASSERT( timer_ticks () % TIMER_FREQ == 0);
+   load_avg = (59/60)*load_avg + (1/60)*ready_threads;  
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->recent_cpu;
 }
-
+
+void thread_set_recent_cpu(void){
+    thread_current()->recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
+}
+
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -495,7 +510,7 @@ kernel_thread (thread_func *function, void *aux)
   function (aux);       /* Execute the thread function. */
   thread_exit ();       /* If function() returns, kill the thread. */
 }
-
+
 /* Returns the running thread. */
 struct thread *
 running_thread (void) 
@@ -650,7 +665,7 @@ static void
 schedule (void) 
 {
   wake_up_thread();
-
+  
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
@@ -677,7 +692,7 @@ allocate_tid (void)
 
   return tid;
 }
-
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
