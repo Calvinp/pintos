@@ -30,6 +30,14 @@ intn14_t sub_n14(intn14_t a, intn14_t b); /* Subtracts two  n.14 integers, a-b *
 intn14_t mult_n14(intn14_t a, intn14_t b); /* Multiplies two n.14 integers, a*b */
 intn14_t div_n14(intn14_t a, intn14_t b); /* Divides two n.14 integers, a/b */
 
+/* Store these as constants to avoid calculating it over and over */
+#define oneOverSixty div_n14(intToIntn14(1), intToIntn14(60))
+#define fiftyNineOverSixty div_n14(intToIntn14(59), intToIntn14(60)) 
+#define one intToIntn14(1) 
+#define two intToIntn14(2)
+#define four intToIntn14(4) 
+#define oneHundred intToIntn14(100)
+
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
@@ -99,7 +107,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int recent_cpu;			                /* CPU time received by the thread recently. */ /* ADDED BY US */
+    intn14_t recent_cpu;			                /* CPU time received by the thread recently. */ /* ADDED BY US */
     int nice;				                    /* Nice value of thread. */ /* ADDED BY US */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleeping list. */ 
@@ -153,7 +161,11 @@ void thread_set_priority (int);
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
-void thread_set_recent_cpu(void)
+void thread_increment_recent_cpu(void);
+void recalculate_all_recent_cpu(void);
+void thread_recalculate_recent_cpu(struct thread*);
+void recalculate_all_priority(void);
+void thread_recalculate_priority(struct thread *t);
 int thread_get_load_avg (void);
 void thread_set_load_avg(void);
 
