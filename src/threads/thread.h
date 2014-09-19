@@ -89,9 +89,11 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int recent_cpu;			/* CPU time received by the thread recently. */
+    int nice;				/* Nice value of thread. */
     struct list_elem allelem;           /* List element for all threads list. */
-    struct list_elem sleepelem;         /* List element for sleeping list. */ /*ADDED BY US*/
-		int64_t wake_time;									/* If I am asleep, when I have to wake up */ /* ADDED BY US */
+    struct list_elem sleepelem;         /* List element for sleeping list. */ 
+    int64_t wake_time;			/* If I am asleep, when I have to wake up */ 
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -141,7 +143,9 @@ void thread_set_priority (int);
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
+void thread_set_recent_cpu(void)
 int thread_get_load_avg (void);
+void thread_set_load_avg(void);
 
 bool compare_wake_time(const struct list_elem*, const struct list_elem*, void *aux);
 
