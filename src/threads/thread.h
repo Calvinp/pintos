@@ -10,7 +10,7 @@ enum thread_status
   {
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
-    THREAD_SLEEPING,	/* New state for sleeping threads. */ /*ADDED BY US*/
+    THREAD_SLEEPING,	/* New state for sleeping threads. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
@@ -19,6 +19,16 @@ enum thread_status
    You can redefine this to whatever type you like. */
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
+
+typedef int64_t intn14_t; /* An integer in the n.14 format - the rightmost 14 bits are after the decimal */ /* ADDED BY US */
+
+#define FPOINT_CONST 1<<14 /* Multiplication constant for n.14 integers */
+intn14_t intToIntn14(int a); /* Converts an integer into an n.14 integer */
+int intn14ToInt(intn14_t a); /* Converts an n.14 integer into an integer */
+intn14_t add_n14(intn14_t a, intn14_t b); /* Adds two n.14 integers, a+b */
+intn14_t sub_n14(intn14_t a, intn14_t b); /* Subtracts two  n.14 integers, a-b */
+intn14_t mult_n14(intn14_t a, intn14_t b); /* Multiplies two n.14 integers, a*b */
+intn14_t div_n14(intn14_t a, intn14_t b); /* Divides two n.14 integers, a/b */
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
@@ -89,9 +99,10 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int nice;                           /* Determines niceness of thread; how much CPU time will we give up? */ /* ADDED BY US */
     struct list_elem allelem;           /* List element for all threads list. */
-    struct list_elem sleepelem;         /* List element for sleeping list. */ /*ADDED BY US*/
-		int64_t wake_time;									/* If I am asleep, when I have to wake up */ /* ADDED BY US */
+    struct list_elem sleepelem;         /* List element for sleeping list. */
+		int64_t wake_time;									/* If I am asleep, when I have to wake up */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -133,7 +144,7 @@ void thread_yield (void);
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
-void thread_sleep(int64_t); // ADDED BY US
+void thread_sleep(int64_t);
 
 int thread_get_priority (void);
 void thread_set_priority (int);

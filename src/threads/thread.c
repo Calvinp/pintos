@@ -69,7 +69,7 @@ static void kernel_thread (thread_func *, void *aux);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
-static void init_thread (struct thread *, const char *name, int priority);
+static void init_thread (struct thread *t, const char *name, int priority, int nice);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
@@ -96,12 +96,12 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
-  list_init (&sleeping_list); /* ADDED BY US */
+  list_init (&sleeping_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
-  init_thread (initial_thread, "main", PRI_DEFAULT);
+  init_thread (initial_thread, "main", PRI_DEFAULT, 0);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
@@ -186,7 +186,7 @@ thread_create (const char *name, int priority,
     return TID_ERROR;
 
   /* Initialize thread. */
-  init_thread (t, name, priority);
+  init_thread (t, name, priority, thread_get_nice());
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
@@ -338,8 +338,8 @@ thread_foreach (thread_action_func *func, void *aux)
 }
 
 
-/* Compare the wake time of the two threads given by the list_elem. */ // ADDED BY US
-bool compare_wake_time(const struct list_elem* a, const struct list_elem* b, void *aux){
+/* Compare the wake time of the two threads given by the list_elem. */
+bool compare_wake_time(const struct list_elem* a, const struct list_elem* b, void *aux UNUSED){
 	struct thread *ta = list_entry (a, struct thread, sleepelem);
 	struct thread *tb = list_entry (b, struct thread, sleepelem);
 	return ta->wake_time < tb->wake_time;	
@@ -347,7 +347,7 @@ bool compare_wake_time(const struct list_elem* a, const struct list_elem* b, voi
 
 
 /* Puts the current thread to sleep for given number of ticks. */
-void thread_sleep (int64_t ticks) { // ADDED BY US
+void thread_sleep (int64_t ticks) {
 	struct thread *cur = thread_current();
 	enum intr_level old_level;
 
@@ -359,6 +359,48 @@ void thread_sleep (int64_t ticks) { // ADDED BY US
 		schedule();
 	}
 	intr_set_level (old_level);
+}
+
+/* 
+ * Some integer n.14 math functions 
+ * Some of these functions are easy, but their use guaruntees addition of int n.14s.
+ * Simply using +, the compiler won't catch the int + intn14_t bug.
+ */
+
+/* Converts an integer into an n.14 integer */
+intn14_t intToIntn14(int a) {
+  return a * (FPOINT_CONST);
+}
+
+/* Converts an n.14 integer into an integer */ 
+int intn14ToInt(intn14_t a) {
+  if (a > 0) {
+    return (a + (FPOINT_CONST)/2) / (FPOINT_CONST);
+  } else {
+    return (a - (FPOINT_CONST)/2) / (FPOINT_CONST);
+  }
+}
+
+/* Adds two n.14 integers, a+b */
+intn14_t add_n14(intn14_t a, intn14_t b) {
+  return a + b;
+}
+
+/* Subtracts two  n.14 integers, a-b */
+intn14_t sub_n14(intn14_t a, intn14_t b) {
+  return a - b;
+}
+
+/* Multiplies two n.14 integers, a*b */
+/* NOTE - By our typedef, intn14_t is already int64_t, so doesn't need to be converted */
+intn14_t mult_n14(intn14_t a, intn14_t b) {
+  return (a * b)/(FPOINT_CONST);
+}
+
+/* Divides two n.14 integers, a/b */
+intn14_t div_n14(intn14_t a, intn14_t b) {
+  ASSERT(b != 0);
+  return (a * (FPOINT_CONST))/b;
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -377,17 +419,16 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int nice) 
 {
-  /* Not yet implemented. */
+  thread_current()->nice = nice;
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -479,7 +520,7 @@ is_thread (struct thread *t)
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
-init_thread (struct thread *t, const char *name, int priority)
+init_thread (struct thread *t, const char *name, int priority, int nice)
 {
   enum intr_level old_level;
 
@@ -492,6 +533,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->nice = nice;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -577,7 +619,7 @@ thread_schedule_tail (struct thread *prev)
 		as given by timer_ticks(). If a sleeping thread is ready to wake
 		up, change its status from THREAD_SLEEPING to THREAD_READY */
 static void
-wake_up_thread (void) // ADDED BY US
+wake_up_thread (void)
 {
 	
 	if(list_empty(&sleeping_list)){
@@ -591,9 +633,8 @@ wake_up_thread (void) // ADDED BY US
 	if (cur_ticks >= t->wake_time) {
 		list_push_back (&ready_list, &t->elem); /* Wake this thread up! */
 		t->status = THREAD_READY;
-		/* t->wake_time = 0;    ADDED BY US */
 		list_remove(e);   /* Remove this thread from sleeping_list */
-		wake_up_thread();    /* Wakes up any other sleeping thread whose wake time has passed */ /* ADDED BY US */
+		wake_up_thread();    /* Wakes up any other sleeping thread whose wake time has passed */
 	}
 	
 }
