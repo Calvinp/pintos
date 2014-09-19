@@ -96,7 +96,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
-  list_init (&sleeping_list);
+  list_init (&sleeping_list); /* ADDED BY US */
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
