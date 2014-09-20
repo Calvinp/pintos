@@ -170,7 +170,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
   if(timer_ticks() % 4 == 0){
-    
+    recalculate_all_priority();
   }
   if(timer_ticks () % TIMER_FREQ == 0){
 	  thread_set_load_avg();

@@ -227,7 +227,7 @@ thread_block (void)
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
-
+  // DONATE PRIORITY HERE
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
 }
@@ -500,10 +500,10 @@ void thread_recalculate_priority(struct thread *t) {
   intn14_t recentCpuOverFour = div_n14(recent_cpu, four);
   intn14_t twoNice = mult_n14(nice, two);
   int newPriority = intn14ToInt(sub_n14(sub_n14(max_pri, recentCpuOverFour), twoNice));
-  if (newPriority > 63) {
-    newPriority = 63;
-  } else if (newPriority < 0) {
-    newPriority = 0;
+  if (newPriority > PRI_MAX) {
+    newPriority = PRI_MAX;
+  } else if (newPriority < PRI_MIN) {
+    newPriority = PRI_MIN;
   }
   t->priority = newPriority;
 }
