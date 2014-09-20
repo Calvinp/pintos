@@ -1,0 +1,148 @@
+			+--------------------+
+			|        CS 140      |
+			| PROJECT 1: THREADS |
+			|   DESIGN DOCUMENT  |
+			+--------------------+
+				   
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+FirstName LastName <email@domain.example>
+FirstName LastName <email@domain.example>
+FirstName LastName <email@domain.example>
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+			     ALARM CLOCK
+			     ===========
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+--------------thread.h-------------------------------------------
+
+struct thread
+  {
+    ...
+    struct list_elem sleepelem;         /* Added a list element member named sleepelem, which indentifies this thread in the sleeping list. */ 
+    int64_t wake_time;		        /* wake_time specifies the when the thread needs to wake up.   */ 
+    ....
+  };
+
+
+/* States in a thread's life cycle. */
+enum thread_status
+  {
+    ...
+    THREAD_SLEEPING,		       /* If a thread goes to sleep, it will get new status THREAD_SLEEPING */ 
+    ...
+  };
+--------------thread.c-------------------------------------------
+
+...
+static struct list sleeping_list;       /* Added a list named sleeping_list, which contains the threads which are sleeping for easy access. */ 
+...
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe what happens in a call to timer_sleep(),
+>> including the effects of the timer interrupt handler.
+
+In timer_sleep(), we assert that interrupts are on. Then we call a new function, thread_sleep(ticks), located in thread.c.
+In thread_sleep, we find out the current thread then turn interrupts off so that we can complete the rest of the function atomicly. Then, we set the status of the thread to THREAD_SLEEPING, set its wake time to ticks seconds in the future, and insert it into the sleeping list. The sleeping list is sorted by how long until the thread wakes up; we insert the new thread in the proper place. 
+The timer interrupt handler calls thread_yield(), which schedules the next thread. That function looks through the sleeping list to see if a thread is ready to wake up, and wakes it up if so.
+Waking a thread up, we set its state to THREAD_READY, then add it back to the ready list.
+
+>> A3: What steps are taken to minimize the amount of time spent in
+>> the timer interrupt handler?
+
+Since the sleeping list is sorted by the amount of time until the thread needs to wake up, we only have to check the first thread when checking if a thread on the list is  >> ready to wake up.
+
+---- SYNCHRONIZATION ----
+
+>> A4: How are race conditions avoided when multiple threads call
+>> timer_sleep() simultaneously?
+
+We turn interrupts off before entering the critical section of timer_sleep where we modify the  sleeping list.
+
+>> A5: How are race conditions avoided when a timer interrupt occurs
+>> during a call to timer_sleep()?
+
+If timer interuppt occur during a call to timer_sleep(),it will not affect the call.We turn off the interrupt before modifying the sleeping list and turn interrupt on when the procedure of modifying sleeping list and scheduleing next thread is complete.
+
+---- RATIONALE ----
+
+>> A6: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+We chose this design because it minimizes the time required to schedule next ready thread. We also considered the design where sleeping list was not sorted,  hence making the insertion time O(1) but finding time O(n). Since insertion happens less often than search, the algorithm used by us is better because it makes search time O(1).
+
+			 PRIORITY SCHEDULING
+			 ===================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+>> B2: Explain the data structure used to track priority donation.
+>> Use ASCII art to diagram a nested donation.  (Alternately, submit a
+>> .png file.)
+
+---- ALGORITHMS ----
+
+>> B3: How do you ensure that the highest priority thread waiting for
+>> a lock, semaphore, or condition variable wakes up first?
+
+>> B4: Describe the sequence of events when a call to lock_acquire()
+>> causes a priority donation.  How is nested donation handled?
+
+>> B5: Describe the sequence of events when lock_release() is called
+>> on a lock that a higher-priority thread is waiting for.
+
+---- SYNCHRONIZATION ----
+
+>> B6: Describe a potential race in thread_set_priority() and explain
+>> how your implementation avoids it.  Can you use a lock to avoid
+>> this race?
+
+---- RATIONALE ----
+
+>> B7: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
