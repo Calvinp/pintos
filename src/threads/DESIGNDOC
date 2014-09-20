@@ -123,6 +123,10 @@ We chose this design because it minimizes the time required to schedule next rea
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
+We considered a design in which we kept the ready list sorted by effecitve priority.
+However, this design is superior because we don't want to perform n*log(n) steps 
+every 4 ticks, when thread priority is recalculated.
+
 			   SURVEY QUESTIONS
 			   ================
 
