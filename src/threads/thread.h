@@ -37,6 +37,7 @@ intn14_t div_n14(intn14_t a, intn14_t b); /* Divides two n.14 integers, a/b */
 #define two intToIntn14(2)
 #define four intToIntn14(4) 
 #define oneHundred intToIntn14(100)
+#define max(x, y) x ^ ((x ^ y) & -(x < y))
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
@@ -111,10 +112,8 @@ struct thread
     int nice;												 		/* Nice value of thread. */ /* ADDED BY US */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleeping list. */
-    struct list_elem donorselem;        /* List element for donors list */
     int64_t wake_time;								  /* If I am asleep, when I have to wake up */ 
     int effective_priority;							/* priority of thread calculated */
-    struct list donors_list;                 /* Threads donating to us */ /* ADDED BY US */
     
 
     /* Shared between thread.c and synch.c. */
@@ -173,7 +172,7 @@ void thread_recalculate_priority(struct thread *t);
 void thread_recalculate_effective_priority(struct thread *t);
 int thread_get_load_avg (void);
 void thread_set_load_avg(void);
-void thread_accept_priority (struct thread *donee);
+void thread_donate_priority (struct thread *donee);
 
 bool compare_wake_time(const struct list_elem*, const struct list_elem*, void *aux);
 bool max_effective_priority_thread(const struct list_elem *a,const struct list_elem *b,void *aux);

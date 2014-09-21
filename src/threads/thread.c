@@ -420,9 +420,13 @@ thread_set_priority (int new_priority)
 }
 
 /* Donates current thread's priority to DONEE */
-void thread_accept_priority (struct thread *donee) {
+void thread_donate_priority (struct thread *donee) {
   struct thread *cur = thread_current();
-  //donee->effective_priority = max(donee->effective_priority, cur->effective_priority);
+  donee->effective_priority = max(donee->effective_priority, cur->effective_priority);
+  if (donee->status == THREAD_READY) {
+    list_remove(&donee->elem);
+    list_insert_ordered(&ready_list, &donee->elem, &max_effective_priority_thread, NULL);
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -618,7 +622,6 @@ init_thread (struct thread *t, const char *name, int nice, intn14_t recent_cpu, 
   t->magic = THREAD_MAGIC;
   t->priority = priority;
   t->effective_priority = priority;
-  list_init(&t->donors_list); // FIGURE THIS OUT!!!!!
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
