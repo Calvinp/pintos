@@ -167,9 +167,11 @@ void recalculate_all_recent_cpu(void);
 void thread_recalculate_recent_cpu(struct thread*);
 void recalculate_all_priority(void);
 void thread_recalculate_priority(struct thread *t);
+void thread_recalculate_effective_priority(struct thread *t);
 int thread_get_load_avg (void);
 void thread_set_load_avg(void);
 
 bool compare_wake_time(const struct list_elem*, const struct list_elem*, void *aux);
+bool max_effective_priority_thread(const struct list_elem *a,const struct list_elem *b,void *aux);
 
 #endif /* threads/thread.h */

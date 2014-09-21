@@ -249,7 +249,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, &max_effective_priority_thread, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -320,7 +320,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_front (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem, &max_effective_priority_thread, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -490,6 +490,7 @@ void recalculate_all_priority(void) {
     struct thread *t = list_entry (e, struct thread, allelem);
           thread_recalculate_priority(t);
   }
+  list_sort(&ready_list, &max_effective_priority_thread, NULL);
 }
 
 /* Recalculates the priority of the given thread */ /* ADDED BY US */
@@ -506,8 +507,13 @@ void thread_recalculate_priority(struct thread *t) {
     newPriority = PRI_MIN;
   }
   t->priority = newPriority;
+  thread_recalculate_effective_priority(t);
 }
 
+/* Recalculates the thread's effective priority */
+void thread_recalculate_effective_priority(struct thread *t) {
+  t->effective_priority = t->priority;
+}
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
@@ -624,7 +630,7 @@ bool max_effective_priority_thread(const struct list_elem *a,const struct list_e
      struct thread *t_a = list_entry (a, struct thread, elem);
      struct thread *t_b = list_entry (b, struct thread, elem);
 
-     return t_a->effective_priority < t_b->effective_priority;
+     return t_a->effective_priority > t_b->effective_priority;
 }
 
 
@@ -708,7 +714,7 @@ wake_up_thread (void)
 	struct thread *t = list_entry (e, struct thread, sleepelem);
 
 	if (cur_ticks >= t->wake_time) {
-		list_push_back (&ready_list, &t->elem); /* Wake this thread up! */
+		list_insert_ordered (&ready_list, &t->elem, &max_effective_priority_thread, NULL); /* Wake this thread up! */
 		t->status = THREAD_READY;
 		list_remove(e);   /* Remove this thread from sleeping_list */
 		wake_up_thread();    /* Wakes up any other sleeping thread whose wake time has passed */
