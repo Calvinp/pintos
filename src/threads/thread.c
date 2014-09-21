@@ -73,7 +73,7 @@ static void kernel_thread (thread_func *, void *aux);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
-static void init_thread (struct thread *t, const char *name, int priority, int nice, intn14_t recent_cpu);
+static void init_thread (struct thread *t, const char *name, int nice, intn14_t recent_cpu, int  priority);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
@@ -105,7 +105,7 @@ thread_init (void)
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
-  init_thread (initial_thread, "main", PRI_DEFAULT, 0, 0);
+  init_thread (initial_thread, "main", 0, 0, PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
@@ -192,7 +192,7 @@ thread_create (const char *name, int priority,
     return TID_ERROR;
 
   /* Initialize thread. */
-  init_thread (t, name, priority, thread_get_nice(), thread_get_recent_cpu());
+  init_thread (t, name, thread_get_nice(), thread_get_recent_cpu(), priority);
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
@@ -212,7 +212,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  thread_yield();
   return tid;
 }
 
@@ -413,14 +413,22 @@ intn14_t div_n14(intn14_t a, intn14_t b) {
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  struct thread *t = thread_current();
+  t->priority = new_priority;
+  thread_recalculate_effective_priority(t);
+  thread_yield();
+}
+
+/* Donates current thread's priority to DONEE */
+void thread_accept_priority (struct thread *donee) {
+  
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  return thread_current ()->effective_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -488,7 +496,9 @@ void recalculate_all_priority(void) {
   for (e = list_begin (&all_list); e != list_end (&all_list);
        e = list_next (e)) {
     struct thread *t = list_entry (e, struct thread, allelem);
-          thread_recalculate_priority(t);
+    if (t != idle_thread) {
+      thread_recalculate_priority(t);
+    }
   }
   list_sort(&ready_list, &max_effective_priority_thread, NULL);
 }
@@ -513,6 +523,9 @@ void thread_recalculate_priority(struct thread *t) {
 /* Recalculates the thread's effective priority */
 void thread_recalculate_effective_priority(struct thread *t) {
   t->effective_priority = t->priority;
+  if (t->status == THREAD_READY) {
+    list_insert_ordered(&ready_list, list_remove(&t->elem), &max_effective_priority_thread, NULL);
+  }
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -588,24 +601,22 @@ is_thread (struct thread *t)
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
-init_thread (struct thread *t, const char *name, int priority, int nice, intn14_t recent_cpu)
+init_thread (struct thread *t, const char *name, int nice, intn14_t recent_cpu, int priority)
 {
   enum intr_level old_level;
 
   ASSERT (t != NULL);
-  ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
 
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
   t->nice = nice;
   t->recent_cpu = recent_cpu;
-  t->effective_priority = priority;
   t->magic = THREAD_MAGIC;
-
+  t->priority = priority;
+  t->effective_priority = priority;
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);

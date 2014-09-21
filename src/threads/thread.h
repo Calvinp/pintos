@@ -113,6 +113,8 @@ struct thread
     struct list_elem sleepelem;         /* List element for sleeping list. */ 
     int64_t wake_time;								  /* If I am asleep, when I have to wake up */ 
     int effective_priority;							/* priority of thread calculated */
+    tid_t *donors;                      /* Threads donating to us */ /* ADDED BY US */
+    
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
