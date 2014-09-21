@@ -320,7 +320,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_push_front (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -597,6 +597,7 @@ init_thread (struct thread *t, const char *name, int priority, int nice, intn14_
   t->priority = priority;
   t->nice = nice;
   t->recent_cpu = recent_cpu;
+  t->effective_priority = priority;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -617,6 +618,16 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+
+/* Search for the highest effective priority thread from the ready list *//* ADDED BY US*/
+bool max_effective_priority_thread(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED){
+     struct thread *t_a = list_entry (a, struct thread, elem);
+     struct thread *t_b = list_entry (b, struct thread, elem);
+
+     return t_a->effective_priority < t_b->effective_priority;
+}
+
+
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -627,9 +638,12 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  else{
+		return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	}
+  
 }
+/* REMOVED THIS LINE : list_entry (list_max(&ready_list,&max_effective_priority_thread,void *aux) , struct thread, elem);*/
 
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.

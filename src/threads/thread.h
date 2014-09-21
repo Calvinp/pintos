@@ -107,11 +107,12 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    intn14_t recent_cpu;			                /* CPU time received by the thread recently. */ /* ADDED BY US */
-    int nice;				                    /* Nice value of thread. */ /* ADDED BY US */
+    intn14_t recent_cpu;								/* CPU time received by the thread recently. */ /* ADDED BY US */
+    int nice;												 		/* Nice value of thread. */ /* ADDED BY US */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleeping list. */ 
-    int64_t wake_time;			            /* If I am asleep, when I have to wake up */ 
+    int64_t wake_time;								  /* If I am asleep, when I have to wake up */ 
+    int effective_priority;							/* priority of thread calculated */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
