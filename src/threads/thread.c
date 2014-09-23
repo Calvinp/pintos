@@ -419,15 +419,64 @@ thread_set_priority (int new_priority)
   thread_yield();
 }
 
-/* Donates current thread's priority to DONEE */
-void thread_donate_priority (struct thread *donee) {
+/* Donates current thread's priority to DONEE */ /* ADDED BY US */
+void thread_donate_priority (struct thread *receiver) {
   struct thread *cur = thread_current();
-  donee->effective_priority = max(donee->effective_priority, cur->effective_priority);
-  if (donee->status == THREAD_READY) {
-    list_remove(&donee->elem);
-    list_insert_ordered(&ready_list, &donee->elem, &max_effective_priority_thread, NULL);
+  receiver->effective_priority = max(receiver->effective_priority, cur->effective_priority);
+ 
+  if (receiver->status == THREAD_READY) {
+    list_remove(&receiver->elem);
+    list_insert_ordered(&ready_list, &receiver->elem, &max_effective_priority_thread, NULL);
   }
+
+  list_insert_ordered(&receiver->donors_list,&cur->donor_elem, &max_effective_priority_thread,NULL); 
 }
+
+
+/* Recalculates the thread priority just before it releases the lock. */ /* ADDED BY US */
+void thread_calculate_effective_priority(struct lock *loc){
+ 
+ /* struct semaphore *sema = &loc->semaphore;
+  struct list *waiters = &sema->waiters;*/
+  //struct thread *cur = thread_current();
+  
+  struct thread *loc_holder = thread_current();
+
+  struct list *donors_list = &loc_holder->donors_list;
+
+  //struct list_elem *e, *de;
+  
+  /*if(!list_empty(waiters)){
+     for (e = list_begin (waiters); e != list_end (waiters);
+           e = list_next (e))
+    {
+       struct thread *t = list_entry (e, struct thread, elem);
+       // list_remove(&t->donor_elem);
+       if(!list_empty(donors_list)){
+             for (de = list_begin (donors_list); de != list_end (donors_list);
+                  de = list_next (e))
+            {
+                struct thread *d = list_entry (de, struct thread, donor_elem);
+                if(t->tid == d->tid)
+                {
+                  list_remove(&d->donor_elem);
+                }              
+            }
+       }             
+     }
+  }*/
+ 
+ 
+  
+  if(!list_empty(donors_list)){
+     struct thread *donors_first_element = list_entry (list_begin (donors_list), struct thread, donor_elem);
+     loc_holder->effective_priority = max(loc_holder->priority, donors_first_element->effective_priority);
+  }else{
+     loc_holder->effective_priority = loc_holder->priority;
+  }
+ 
+}
+
 
 /* Returns the current thread's priority. */
 int
@@ -622,8 +671,13 @@ init_thread (struct thread *t, const char *name, int nice, intn14_t recent_cpu, 
   t->magic = THREAD_MAGIC;
   t->priority = priority;
   t->effective_priority = priority;
+  list_init(&t->donors_list);		/*ADDED BY US */
+  
   old_level = intr_disable ();
+  
   list_push_back (&all_list, &t->allelem);
+  list_push_back(&t->donors_list,&t->donor_elem);  /*ADDED BY US Doubt full*/
+  
   intr_set_level (old_level);
 }
 
@@ -661,8 +715,8 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else{
-		return list_entry (list_pop_front (&ready_list), struct thread, elem);
-	}
+	return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  }
   
 }
 /* REMOVED THIS LINE : list_entry (list_max(&ready_list,&max_effective_priority_thread,void *aux) , struct thread, elem);*/

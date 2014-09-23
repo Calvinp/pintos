@@ -32,6 +32,12 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
+/* List of all locks. When a lock fist initialized it will be
+   added to the this list. */
+//static struct list all_locks; /* ADDED BY US */
+
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -66,10 +72,11 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  while (sema->value == 0) 
+  while (sema->value == 0) // originally was sema->value == 0
     {
-      list_push_back (&sema->waiters, &thread_current ()->elem);
-      thread_block ();
+       list_insert_ordered (&sema->waiters,&thread_current ()->elem, &max_effective_priority_thread, NULL);
+       //list_push_back (&sema->waiters, &thread_current ()->elem);
+       thread_block ();
     }
   sema->value--;
   intr_set_level (old_level);
@@ -113,11 +120,15 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem)); // THIS SHOULD CHANGE
-                                                       // UNBLOCK HIGHEST PRIORITY THREAD
-                                                       // NOT FRONT OF LIST
+ 
+  if (!list_empty (&sema->waiters)) {
+     
+     struct thread *t  = list_entry (list_pop_front (&sema->waiters),
+                                struct thread, elem);
+    
+     thread_unblock (t);
+    
+  }
   sema->value++;
   intr_set_level (old_level);
 }
@@ -158,7 +169,7 @@ sema_test_helper (void *sema_)
       sema_up (&sema[1]);
     }
 }
-
+
 /* Initializes LOCK.  A lock can be held by at most a single
    thread at any given time.  Our locks are not "recursive", that
    is, it is an error for the thread currently holding a lock to
@@ -181,6 +192,8 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+  //list_push_back (&all_locks, &lock->lock_elem); Causing error 
+  
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -199,13 +212,20 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   struct semaphore *sema = &lock->semaphore;
+  struct thread *t = thread_current ();
+  
   enum intr_level old_level;
   old_level = intr_disable ();
+  
+
   while (!lock_try_acquire(lock)) 
     {
-      list_push_back (&sema->waiters, &thread_current ()->elem);
-      thread_donate_priority(lock->holder);
-      thread_block ();
+      //list_push_back (&sema->waiters, &thread_current ()->elem);
+      if(t->tid != lock->holder->tid){
+      	thread_donate_priority(lock->holder);
+        list_insert_ordered (&sema->waiters, &t->elem, &max_effective_priority_thread, NULL);
+      	thread_block ();
+      }
     }
   intr_set_level (old_level);
 }
@@ -240,9 +260,28 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  enum intr_level old_level;
 
+  old_level = intr_disable();
+  
+  thread_calculate_effective_priority(lock);
+
+  /* ADDED BY ME */
+  /* struct semaphore *sema = &lock->semaphore;
+   struct list *waiter =  &sema->waiters;
+   struct list_elem *waiters_elem;
+   struct thread *waiter_entry = list_entry (waiters_elem, struct thread, elem) ;
+
+  // Remove this lock holder from the waiters list of the semaphore 
+  list_remove(waiters_elem);*/
+ 
   lock->holder = NULL;
+  
   sema_up (&lock->semaphore);
+  
+  intr_set_level(old_level);
+  thread_yield();
+  
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -255,7 +294,7 @@ lock_held_by_current_thread (const struct lock *lock)
 
   return lock->holder == thread_current ();
 }
-
+
 /* One semaphore in a list. */
 struct semaphore_elem 
   {

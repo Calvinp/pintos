@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -108,13 +109,17 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    intn14_t recent_cpu;								/* CPU time received by the thread recently. */ /* ADDED BY US */
-    int nice;												 		/* Nice value of thread. */ /* ADDED BY US */
+    intn14_t recent_cpu;		/* CPU time received by the thread recently. */ /* ADDED BY US */
+    int nice;				/* Nice value of thread. */ /* ADDED BY US */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleeping list. */
-    int64_t wake_time;								  /* If I am asleep, when I have to wake up */ 
-    int effective_priority;							/* priority of thread calculated */
-    
+    int64_t wake_time;			 /* If I am asleep, when I have to wake up */ 
+    int effective_priority;		/* priority of thread calculated */
+   
+   
+    struct list donors_list;             /* List of thread ready to donate their priority */ /* ADDED BY US */
+    struct list_elem donor_elem;        /* element of the donor list */ /* ADDED BY US */ 
+    struct list_elem waiter_elem;	/* waiters list elem*/
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -173,6 +178,7 @@ void thread_recalculate_effective_priority(struct thread *t);
 int thread_get_load_avg (void);
 void thread_set_load_avg(void);
 void thread_donate_priority (struct thread *donee);
+void thread_calculate_effective_priority(struct lock *loc);
 
 bool compare_wake_time(const struct list_elem*, const struct list_elem*, void *aux);
 bool max_effective_priority_thread(const struct list_elem *a,const struct list_elem *b,void *aux);
