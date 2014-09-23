@@ -249,6 +249,9 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  if (t->lock_waiting_on != 0) {
+    list_remove(&t->elem); // ADDED BY US // Removes from the semaphore's waiting list nicely if it's on it
+  }
   list_insert_ordered (&ready_list, &t->elem, &max_effective_priority_thread, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
@@ -419,59 +422,41 @@ thread_set_priority (int new_priority)
   thread_yield();
 }
 
-/* Donates current thread's priority to DONEE */ /* ADDED BY US */
-void thread_donate_priority (struct thread *receiver) {
-  struct thread *cur = thread_current();
-  receiver->effective_priority = max(receiver->effective_priority, cur->effective_priority);
- 
-  if (receiver->status == THREAD_READY) {
-    list_remove(&receiver->elem);
-    list_insert_ordered(&ready_list, &receiver->elem, &max_effective_priority_thread, NULL);
+void thread_donate_priority (struct thread *reciever) { // To donate our priority to a thread:
+  ASSERT (intr_get_level () == INTR_OFF); // Interrupts must be off
+  struct thread *curr = thread_current();
+  ASSERT (curr != reciever); // We must not be donating to ourself
+  struct list_elem *my_donor_elem = &curr->donor_elem;
+  reciever->effective_priority = max(curr->effective_priority, reciever->effective_priority); // Give our priority to the recieving thread, unless it already has higher priority than us
+  list_insert_ordered(&reciever->donors_list, my_donor_elem, &max_effective_priority_thread, NULL); // Put us in the list of threads donating to them
+  if (reciever->status == THREAD_READY) { // If the recieving thread is ready to run...
+     list_remove(&reciever->elem); // ... remove it from the ready list and put it back on in its new position
+     list_insert_ordered(&ready_list, &reciever->elem, &max_effective_priority_thread, NULL);
   }
-
-  list_insert_ordered(&receiver->donors_list,&cur->donor_elem, &max_effective_priority_thread,NULL); 
 }
-
 
 /* Recalculates the thread priority just before it releases the lock. */ /* ADDED BY US */
 void thread_calculate_effective_priority(struct lock *loc){
- 
- /* struct semaphore *sema = &loc->semaphore;
-  struct list *waiters = &sema->waiters;*/
-  //struct thread *cur = thread_current();
-  
+  ASSERT (intr_get_level () == INTR_OFF);
+  struct semaphore *sema = &loc->semaphore;
+  struct list *waiters = &sema->waiters;  
   struct thread *loc_holder = thread_current();
-
   struct list *donors_list = &loc_holder->donors_list;
-
-  //struct list_elem *e, *de;
-  
-  /*if(!list_empty(waiters)){
-     for (e = list_begin (waiters); e != list_end (waiters);
-           e = list_next (e))
-    {
-       struct thread *t = list_entry (e, struct thread, elem);
-       // list_remove(&t->donor_elem);
-       if(!list_empty(donors_list)){
-             for (de = list_begin (donors_list); de != list_end (donors_list);
-                  de = list_next (e))
-            {
-                struct thread *d = list_entry (de, struct thread, donor_elem);
-                if(t->tid == d->tid)
-                {
-                  list_remove(&d->donor_elem);
-                }              
-            }
-       }             
-     }
-  }*/
+  struct list_elem *e;
+  for (e = list_begin(donors_list); e != list_end(donors_list); e = list_next(e)) {
+    struct thread *t = list_entry (e, struct thread, donor_elem);
+    ASSERT (t->magic == THREAD_MAGIC);
+    if (t->lock_waiting_on == loc_holder->lock_waiting_on) {
+      list_remove(&t->donor_elem);
+    }
+    //thread_unblock(t);
+  }
  
- 
-  
-  if(!list_empty(donors_list)){
-     struct thread *donors_first_element = list_entry (list_begin (donors_list), struct thread, donor_elem);
-     loc_holder->effective_priority = max(loc_holder->priority, donors_first_element->effective_priority);
-  }else{
+  if(!list_empty(donors_list)) {
+     struct thread *donors_first_element = list_entry (list_begin(donors_list), struct thread, donor_elem);
+     int new_priority = max(loc_holder->priority, donors_first_element->effective_priority);
+     loc_holder->effective_priority = new_priority;
+  } else {
      loc_holder->effective_priority = loc_holder->priority;
   }
  

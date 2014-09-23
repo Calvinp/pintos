@@ -115,6 +115,7 @@ struct thread
     struct list_elem sleepelem;         /* List element for sleeping list. */
     int64_t wake_time;			 /* If I am asleep, when I have to wake up */ 
     int effective_priority;		/* priority of thread calculated */
+    struct lock *lock_waiting_on; //ADDED BY US /* The lock we are waiting on */
    
    
     struct list donors_list;             /* List of thread ready to donate their priority */ /* ADDED BY US */

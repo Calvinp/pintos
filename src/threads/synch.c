@@ -78,6 +78,7 @@ sema_down (struct semaphore *sema)
        //list_push_back (&sema->waiters, &thread_current ()->elem);
        thread_block ();
     }
+  list_remove(&thread_current()->elem);
   sema->value--;
   intr_set_level (old_level);
 }
@@ -218,15 +219,13 @@ lock_acquire (struct lock *lock)
   old_level = intr_disable ();
   
 
-  while (!lock_try_acquire(lock)) 
-    {
-      //list_push_back (&sema->waiters, &thread_current ()->elem);
-      if(t->tid != lock->holder->tid){
+  while (!lock_try_acquire(lock)) {
+        ASSERT (!lock_held_by_current_thread (lock));
       	thread_donate_priority(lock->holder);
         list_insert_ordered (&sema->waiters, &t->elem, &max_effective_priority_thread, NULL);
+        t->lock_waiting_on = lock;
       	thread_block ();
-      }
-    }
+  }
   intr_set_level (old_level);
 }
 
@@ -265,16 +264,7 @@ lock_release (struct lock *lock)
   old_level = intr_disable();
   
   thread_calculate_effective_priority(lock);
-
-  /* ADDED BY ME */
-  /* struct semaphore *sema = &lock->semaphore;
-   struct list *waiter =  &sema->waiters;
-   struct list_elem *waiters_elem;
-   struct thread *waiter_entry = list_entry (waiters_elem, struct thread, elem) ;
-
-  // Remove this lock holder from the waiters list of the semaphore 
-  list_remove(waiters_elem);*/
- 
+  lock->holder->lock_waiting_on = NULL;
   lock->holder = NULL;
   
   sema_up (&lock->semaphore);
