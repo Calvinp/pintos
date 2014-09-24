@@ -419,20 +419,16 @@ thread_set_priority (int new_priority)
 }
 
 
-void thread_donate_priority (struct thread *donor, struct thread *reciever, int depth) { // To donate priority to a thread:
+void thread_donate_priority (struct thread *donor, struct thread *receiver, int depth) { // To donate priority to a thread:
   struct thread *d = donor;
-  struct thread *r = reciever;
+  struct thread *r = receiver;
   struct lock *loc = d->lock_waiting_on;
   ASSERT (intr_get_level () == INTR_OFF); // Interrupts must be off
   
   while (loc != NULL && r->effective_priority < d->effective_priority && depth < MAX_DEPTH) {
     ASSERT (d != r); // Donor must not be donating to itself
-    ASSERT (d->donor_elem.next != &d->donor_elem)
-    ASSERT (d->donor_elem.prev != &d->donor_elem)
     list_try_remove(&d->donor_elem);
     list_insert_ordered(&r->donors_list, &d->donor_elem, &max_effective_priority_thread, NULL); // Put donor in the list of threads donating to reciever
-    ASSERT (d->donor_elem.next != &d->donor_elem)
-    ASSERT (d->donor_elem.prev != &d->donor_elem)
     r->effective_priority = d->effective_priority; // Give the donating thread's priority to the recieving thread, unless it already has higher priority than us
     if (r->status == THREAD_READY) { // If the recieving thread is ready to run...
       list_remove(&r->elem); // ... remove it from the ready list and put it back on in its new position
@@ -456,7 +452,6 @@ void thread_calculate_effective_priority(struct lock *loc){
   struct thread *loc_holder = thread_current();
   struct list *donors_list = &loc_holder->donors_list;
   struct list_elem *e = list_begin(donors_list);
-  struct list_elem *temp;
 
   if(!list_empty(donors_list)){
   
@@ -464,14 +459,11 @@ void thread_calculate_effective_priority(struct lock *loc){
 		 
       struct thread *t = list_entry (e, struct thread, donor_elem);
       ASSERT (t->magic == THREAD_MAGIC);
-      
-      temp = list_next(e);
-     
 		  if (t->lock_waiting_on == loc) {
-        list_remove(e);
-		  }
-
-      e = temp;		  
+        e = list_remove(e);
+		  } else {
+		    e = list_next(e);
+		  }	  
 		}
 
 
