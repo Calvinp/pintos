@@ -331,12 +331,22 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
  
-  sema_init (&waiter.semaphore, 0);
-  list_push_back (&cond->waiters, &waiter.elem);
-  lock_release (lock);
-  sema_down (&waiter.semaphore);
-  lock_acquire (lock);
+  sema_init (&waiter.semaphore, 0); // Creates a semaphore
+  list_push_back (&cond->waiters, &waiter.elem); // Adds it to the cond's list of semaphores
+  lock_release (lock); // Release our lock
+  sema_down (&waiter.semaphore); // Down the semaphore we just created, waiting until someone else ups it, meaning the condition has been met and we can get our lock again
+  lock_acquire (lock); //Reacquire the lock we previously released
 }
+
+/* Compare two semaphores to see which one is waiting on the highest effective priority thread *//* ADDED BY US*/
+bool max_effective_priority_semaphore(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED){
+     struct semaphore_elem *s_a = list_entry (a, struct semaphore_elem, elem);
+     struct semaphore_elem *s_b = list_entry (b, struct semaphore_elem, elem);
+     struct thread *t_a = list_entry(list_begin(&s_a->semaphore.waiters), struct thread, elem);
+     struct thread *t_b = list_entry(list_begin(&s_b->semaphore.waiters), struct thread, elem);
+     return t_a->effective_priority > t_b->effective_priority;
+}
+
 
 /* If any threads are waiting on COND (protected by LOCK), then
    this function signals one of them to wake up from its wait.
@@ -354,13 +364,9 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   if (!list_empty (&cond->waiters)) {
-    enum intr_level old_level;
-    old_level = intr_disable();
-    list_sort(&cond->waiters, &max_effective_priority_thread, NULL);
-    
+    list_sort(&cond->waiters, &max_effective_priority_semaphore, NULL);
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
-    intr_set_level(old_level);                      
   }
 }
 

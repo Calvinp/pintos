@@ -697,7 +697,7 @@ alloc_frame (struct thread *t, size_t size)
 }
 
 
-/* Search for the highest effective priority thread from the ready list *//* ADDED BY US*/
+/* Compare the two given threads to see if a's effective priority is higher than b's *//* ADDED BY US*/
 bool max_effective_priority_thread(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED){
      struct thread *t_a = list_entry (a, struct thread, elem);
      struct thread *t_b = list_entry (b, struct thread, elem);
