@@ -120,7 +120,7 @@ struct thread
    
     struct list donors_list;             /* List of thread ready to donate their priority */ /* ADDED BY US */
     struct list_elem donor_elem;        /* element of the donor list */ /* ADDED BY US */ 
-    struct list_elem waiter_elem;	/* waiters list elem*/
+ 
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

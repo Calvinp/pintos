@@ -74,7 +74,7 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) // originally was sema->value == 0
     {
-       list_insert_ordered (&sema->waiters,&thread_current ()->elem, &max_effective_priority_thread, NULL);
+        list_insert_ordered (&sema->waiters,&thread_current ()->elem, &max_effective_priority_thread, NULL);
        //list_push_back (&sema->waiters, &thread_current ()->elem);
        thread_block ();
     }
@@ -124,9 +124,10 @@ sema_up (struct semaphore *sema)
  
   if (!list_empty (&sema->waiters)) {
      
+     
      struct thread *t  = list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem);
-    
+   
      thread_unblock (t);
     
   }
@@ -193,7 +194,6 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
-  //list_push_back (&all_locks, &lock->lock_elem); Causing error 
   
 }
 
@@ -261,8 +261,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   enum intr_level old_level;
 
-  old_level = intr_disable();
-  
+  old_level = intr_disable(); 
   thread_calculate_effective_priority(lock);
   lock->holder->lock_waiting_on = NULL;
   lock->holder = NULL;
