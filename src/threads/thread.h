@@ -44,6 +44,7 @@ intn14_t div_n14(intn14_t a, intn14_t b); /* Divides two n.14 integers, a/b */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+#define MAX_DEPTH 8                     /* Maximum depth of priority donations. */
 
 /* A kernel thread or user process.
 
@@ -178,7 +179,7 @@ void thread_recalculate_priority(struct thread *t);
 void thread_recalculate_effective_priority(struct thread *t);
 int thread_get_load_avg (void);
 void thread_set_load_avg(void);
-void thread_donate_priority (struct thread *donee);
+void thread_donate_priority (struct thread *donor, struct thread *reciever, int depth);
 void thread_calculate_effective_priority(struct lock *loc);
 
 bool compare_wake_time(const struct list_elem*, const struct list_elem*, void *aux);

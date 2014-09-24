@@ -227,7 +227,6 @@ thread_block (void)
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
-  // DONATE PRIORITY HERE
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
 }
@@ -249,9 +248,6 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
- /* if (t->lock_waiting_on != 0) {
-    list_remove(&t->elem); // ADDED BY US // Removes from the semaphore's waiting list nicely if it's on it
-  }*/
   list_insert_ordered (&ready_list, &t->elem, &max_effective_priority_thread, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
@@ -432,28 +428,56 @@ thread_set_priority (int new_priority)
 
 }*/
 
-void thread_donate_priority (struct thread *reciever) { // To donate our priority to a thread:
+
+void thread_donate_priority (struct thread *donor, struct thread *reciever, int depth) { // To donate priority to a thread:
+  struct thread *d = donor;
+  struct thread *r = reciever;
+  struct lock *loc = d->lock_waiting_on;
   ASSERT (intr_get_level () == INTR_OFF); // Interrupts must be off
   
-  struct thread *curr = thread_current();
-  
-  ASSERT (curr != reciever); // We must not be donating to ourself
+  //while (loc != NULL && depth < MAX_DEPTH) {
+    ASSERT (d != r); // Donor must not be donating to itself
 
-  
-  if(curr->effective_priority <= reciever->effective_priority){
- 		return ;
-  }
-
-  reciever->effective_priority = max(curr->effective_priority, reciever->effective_priority); // Give our priority to the recieving thread, unless it already has higher priority than us
-  list_insert_ordered(&reciever->donors_list,&curr->donor_elem, &max_effective_priority_thread, NULL); // Put us in the list of threads donating to them
-  if (reciever->status == THREAD_READY) { // If the recieving thread is ready to run...
-     //list_remove(&reciever->elem); // ... remove it from the ready list and put it back on in its new position
-     //list_insert_ordered(&ready_list, &reciever->elem, &max_effective_priority_thread, NULL);
-    list_sort(&ready_list, &max_effective_priority_thread, NULL);
-  }
-
-  ASSERT(list_begin (&reciever->donors_list) != list_end (&reciever->donors_list))
+    r->effective_priority = max(d->effective_priority, r->effective_priority); // Give the donating thread's priority to the recieving thread, unless it already has higher priority than us
+    list_insert_ordered(&r->donors_list, &d->donor_elem, &max_effective_priority_thread, NULL); // Put donor in the list of threads donating to reciever
+    if (r->status == THREAD_READY) { // If the recieving thread is ready to run...
+       list_remove(&r->elem); // ... remove it from the ready list and put it back on in its new position
+       list_insert_ordered(&ready_list, &r->elem, &max_effective_priority_thread, NULL);
+    }
+    
+    loc = r->lock_waiting_on;
+    d = r;
+    if (loc != NULL) {
+      r = r->lock_waiting_on->holder;
+    }
+    depth++;
+  //}
 }
+
+/*
+void thread_donate_priority (struct thread *donor, struct thread *reciever, int depth) { // To donate priority to a thread:
+  ASSERT (intr_get_level () == INTR_OFF); // Interrupts must be off
+  
+  ASSERT (donor != reciever); // Donor must not be donating to itself
+
+  reciever->effective_priority = max(donor->effective_priority, reciever->effective_priority); // Give the donating thread's priority to the recieving thread, unless it already has higher priority than us
+  list_insert_ordered(&reciever->donors_list,&donor->donor_elem, &max_effective_priority_thread, NULL); // Put donor in the list of threads donating to reciever
+  if (reciever->status == THREAD_READY) { // If the recieving thread is ready to run...
+     list_remove(&reciever->elem); // ... remove it from the ready list and put it back on in its new position
+     list_insert_ordered(&ready_list, &reciever->elem, &max_effective_priority_thread, NULL);
+    //list_sort(&ready_list, &max_effective_priority_thread, NULL);
+  }
+
+  ASSERT(list_begin (&reciever->donors_list) != list_end (&reciever->donors_list));
+  
+  struct lock *loc;
+  struct thread *receiver_b; // Please ignore my blatant spelling error in the rest of this function -- Clavin
+  if ((loc = reciever->lock_waiting_on) != NULL && reciever->status == THREAD_BLOCKED && depth < MAX_DEPTH) { //DEBUG - THIS CAN BE DONE IN MANY DIFFERENT WAYS
+    receiver_b = loc->holder; // Now, reciever needs to donate its priority to any thread it's waiting on
+    thread_donate_priority(reciever, receiver_b, depth + 1);  
+  }
+}
+*/
 
 /* Recalculates the thread priority just before it releases the lock. */ /* ADDED BY US */
 void thread_calculate_effective_priority(struct lock *loc){
@@ -475,7 +499,6 @@ void thread_calculate_effective_priority(struct lock *loc){
       temp = list_next(e);
      
 		  if (t->lock_waiting_on == loc) {
-		    //list_remove(&t->donor_elem);
         list_remove(&t->donor_elem);
 		  }
 
