@@ -592,9 +592,12 @@ void thread_recalculate_priority(struct thread *t) {
 
 /* Recalculates the thread's effective priority */
 void thread_recalculate_effective_priority(struct thread *t) {
-  t->effective_priority = t->priority;
+  struct thread *donor;
+  donor = list_entry (list_begin(&t->donors_list), struct thread, donor_elem);
+  t->effective_priority = max(t->priority, donor->effective_priority);
   if (t->status == THREAD_READY) {
-    list_insert_ordered(&ready_list, list_remove(&t->elem), &max_effective_priority_thread, NULL);
+    list_remove(&t->elem);
+    list_insert_ordered(&ready_list, &t->elem, &max_effective_priority_thread, NULL);
   }
 }
 
