@@ -177,12 +177,11 @@ We also keep the ready list sorted, and always wake up the thread with the great
 
 - First, we perform some safety and sanity checks and turn interrupts off.
 - Then, we recalculte the current thread's (thread releasing the lock) effective priority:
-  - If the current thread's (thread releasing the lock) donors list is not empty:
-    - Iterate through that list. O(n)
+- Iterate through the current thread's list of threads donating to it. O(n)
     - For each thread on the list, remove it from the list if it's waiting on the lock we're releasing. O(1)
       It's no longer donating priority to us.
-    - Then, if the donors list is still not empty, take the first element remaining on that list and set our effective priority to be the maximum of that thread's effective priority and our priority. If the donors list is now empty, set our effective priority to be our priority.
-  - If the current thread's donors list was already empty, simply set its effective priority to be its priority.
+- Then, if the donors list is not empty, take the first element remaining on that list and set our effective priority to be the maximum of that thread's effective priority and our priority. If the donors list is now empty, set our effective priority to be our priority.
+- Otherwise, simply set its effective priority equal to its priority.
 
 ---- SYNCHRONIZATION ----
 
