@@ -214,9 +214,9 @@ lock_acquire (struct lock *lock)
   while (!lock_try_acquire(lock)) {
         ASSERT (!lock_held_by_current_thread (lock));
         t->lock_waiting_on = lock;
-      	thread_donate_priority(t, lock->holder, 0);
+        thread_donate_priority(t, lock->holder, 0);
         list_insert_ordered (&sema->waiters, &t->elem, &max_effective_priority_thread, NULL);
-      	thread_block ();
+        thread_block ();
   }
   intr_set_level (old_level);
 }

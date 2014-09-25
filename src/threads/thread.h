@@ -11,7 +11,7 @@ enum thread_status
   {
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
-    THREAD_SLEEPING,	/* New state for sleeping threads. */
+    THREAD_SLEEPING,    /* New state for sleeping threads. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
