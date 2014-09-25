@@ -169,14 +169,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  if(timer_ticks () % TIMER_FREQ == 0){
-    thread_set_load_avg();
-    recalculate_all_recent_cpu();
-  }
-  //if(timer_ticks() % 4 == 0){
-    //recalculate_all_priority(); TEST CODE REMOVAL - READD
-    //intr_yield_on_return(); TEST CODE REMOVAL - READD
-  //} 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

@@ -21,26 +21,7 @@ enum thread_status
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
-typedef int64_t intn14_t; /* An integer in the n.14 format - the rightmost 14 bits are after the decimal */ /* ADDED BY US */
-
-/* DELETE THE FOLLOWING */
-#define FPOINT_CONST 1<<14 /* Multiplication constant for n.14 integers */
-intn14_t intToIntn14(int a); /* Converts an integer into an n.14 integer */
-int intn14ToInt(intn14_t a); /* Converts an n.14 integer into an integer */
-intn14_t add_n14(intn14_t a, intn14_t b); /* Adds two n.14 integers, a+b */
-intn14_t sub_n14(intn14_t a, intn14_t b); /* Subtracts two  n.14 integers, a-b */
-intn14_t mult_n14(intn14_t a, intn14_t b); /* Multiplies two n.14 integers, a*b */
-intn14_t div_n14(intn14_t a, intn14_t b); /* Divides two n.14 integers, a/b */
-
-/* Store these as constants to avoid calculating it over and over */
-#define oneOverSixty div_n14(intToIntn14(1), intToIntn14(60))
-#define fiftyNineOverSixty div_n14(intToIntn14(59), intToIntn14(60)) 
-#define one intToIntn14(1) 
-#define two intToIntn14(2)
-#define four intToIntn14(4) 
-#define oneHundred intToIntn14(100)
-/* DELETE THE PREVIOUS */
-#define max(x, y) x ^ ((x ^ y) & -(x < y))
+#define max(x, y) x ^ ((x ^ y) & -(x < y)) // Macro for calculating the max of two integers
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
@@ -112,8 +93,6 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    intn14_t recent_cpu;		/* CPU time received by the thread recently. */ /* ADDED BY US */
-    int nice;				/* Nice value of thread. */ /* ADDED BY US */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleeping list. */
     int64_t wake_time;			 /* If I am asleep, when I have to wake up */ 
