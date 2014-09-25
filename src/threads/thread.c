@@ -411,30 +411,23 @@ void thread_release_donations(struct lock *loc){
   struct list *donors_list = &loc_holder->donors_list;
   struct list_elem *e = list_begin(donors_list);
 
-  if (!list_empty(donors_list)) {
-  
-    while ( e != list_end(donors_list)) {
+  while ( e != list_end(donors_list)) {
 
-      struct thread *t = list_entry (e, struct thread, donor_elem);
-      ASSERT (t->magic == THREAD_MAGIC);
-      if (t->lock_waiting_on == loc) {
-        e = list_remove(e);
-      } else {
-        e = list_next(e);
-      }
+    struct thread *t = list_entry (e, struct thread, donor_elem);
+    ASSERT (t->magic == THREAD_MAGIC);
+    if (t->lock_waiting_on == loc) {
+      e = list_remove(e);
+    } else {
+      e = list_next(e);
     }
-
-      if (!list_empty(donors_list)) {
-        struct thread *donors_first_element = list_entry (list_begin(donors_list), struct thread, donor_elem);
-        int new_priority = max(loc_holder->priority, donors_first_element->effective_priority);
-        loc_holder->effective_priority = new_priority;
-      } else {
-        loc_holder->effective_priority = loc_holder->priority;
-      }
- 
-  } else {
-    loc_holder->effective_priority = loc_holder->priority;
   }
+    if (!list_empty(donors_list)) {
+      struct thread *donors_first_element = list_entry (list_begin(donors_list), struct thread, donor_elem);
+      int new_priority = max(loc_holder->priority, donors_first_element->effective_priority);
+      loc_holder->effective_priority = new_priority;
+    } else {
+      loc_holder->effective_priority = loc_holder->priority;
+    }
  
 }
 
