@@ -112,10 +112,30 @@ struct thread {
 Each thread maintains a list of threads donating to it, and the lock that it is waiting on (or NULL if it isn't waiting on a lock).
 The list of threads donating to a thread is maintained in a sorted order.
 
+Threads: H, M, L
+Locks: X, Y
+X->lock_holder = L
+Y->lock_holder = M
+L->Donors_list = {H, M}
+M->Donors_list = {H}
+H->Donors_list = {}
 
-
-
-
+     Waits on lock
+[H] ---------------> [Y] (held by M)
+ |
+ |
+ | Donates to
+ |
+ |
+ V        Waits on lock
+ --->[M] ---------------> [X] (held by L)
+      |
+      |
+      | Donates H's priority to
+      |
+      |
+      V
+     [L]
 
 ---- ALGORITHMS ----
 
