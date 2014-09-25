@@ -32,12 +32,6 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-
-/* List of all locks. When a lock fist initialized it will be
-   added to the this list. */
-//static struct list all_locks; /* ADDED BY US */
-
-
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -260,7 +254,7 @@ lock_release (struct lock *lock)
   enum intr_level old_level;
 
   old_level = intr_disable(); 
-  thread_calculate_effective_priority(lock);
+  thread_release_donations(lock);
   lock->holder->lock_waiting_on = NULL;
   lock->holder = NULL;
   
@@ -377,7 +371,7 @@ cond_broadcast (struct condition *cond, struct lock *lock)
     cond_signal (cond, lock);
 }
 
-/* Compare two semaphores to see which one is waiting on the highest effective priority thread *//* ADDED BY US*/
+/* Compare two semaphores to see which one is waiting on the highest effective priority thread */
 bool max_effective_priority_semaphore(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED) {
      struct semaphore_elem *s_a = list_entry (a, struct semaphore_elem, elem);
      struct semaphore_elem *s_b = list_entry (b, struct semaphore_elem, elem);

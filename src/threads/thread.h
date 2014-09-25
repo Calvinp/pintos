@@ -95,13 +95,13 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleeping list. */
-    int64_t wake_time;			 /* If I am asleep, when I have to wake up */ 
-    int effective_priority;		/* priority of thread calculated */
-    struct lock *lock_waiting_on; //ADDED BY US /* The lock we are waiting on */
+    int64_t wake_time;                  /* If I am asleep, when I have to wake up */ 
+    int effective_priority;             /* priority of thread calculated */
+    struct lock *lock_waiting_on;       /* The lock we are waiting on */
    
    
-    struct list donors_list;             /* List of thread ready to donate their priority */ /* ADDED BY US */
-    struct list_elem donor_elem;        /* element of the donor list */ /* ADDED BY US */ 
+    struct list donors_list;             /* List of thread ready to donate their priority */
+    struct list_elem donor_elem;        /* element of the donor list */
  
 
     /* Shared between thread.c and synch.c. */
@@ -161,7 +161,7 @@ void thread_recalculate_effective_priority(struct thread *t);
 int thread_get_load_avg (void);
 void thread_set_load_avg(void);
 void thread_donate_priority (struct thread *donor, struct thread *reciever, int depth);
-void thread_calculate_effective_priority(struct lock *loc);
+void thread_release_donations(struct lock *loc);
 
 bool compare_wake_time(const struct list_elem*, const struct list_elem*, void *aux);
 bool max_effective_priority_thread(const struct list_elem *a,const struct list_elem *b,void *aux);

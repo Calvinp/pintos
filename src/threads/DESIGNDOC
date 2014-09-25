@@ -8,8 +8,9 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Ankita Muley ankita7@ccs.neu.edu
+Calvin Pomerantz calvin@ccs.neu.edu (Dropped the course, but worked with the team before dropping)
+Rakesh Viswanathan rakeshv9@ccs.neu.edu
 Sanat Chugh sanatc@ccs.neu.edu
 
 ---- PRELIMINARIES ----
@@ -108,6 +109,13 @@ struct thread {
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
+Each thread maintains a list of threads donating to it, and the lock that it is waiting on (or NULL if it isn't waiting on a lock).
+The list of threads donating to a thread is maintained in a sorted order.
+
+
+
+
+
 
 ---- ALGORITHMS ----
 
@@ -141,6 +149,8 @@ We also keep the ready list sorted, and always wake up the thread with the great
 >> B6: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it. Can you use a lock to avoid
 >> this race?
+There is a race if a thread sets its priority while another thread attempts to donate its priority to the thread setting priority. The resulting effective priority may become the maximum of the thread that previously had the highest priority amongst donating threads and the current thread's priority. This is avoided by turning interrupts off during thread_set_priority - we can now be sure that that function call will complete atomicly.
+A lock cannot be used to avoid this race. If thread A is inside thread_set_priority, and has some priority change lock, and thread B attempts to donate its priority to thread A, it will need to wait for A to relinquish the priority change lock. To speed this process up, B would attempt to donate its priority to A. Since A has its priority change lock, B will need to wait for A to relinquish the priority change lock....
 
 ---- RATIONALE ----
 

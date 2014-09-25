@@ -364,13 +364,17 @@ void thread_sleep (int64_t ticks) {
 void
 thread_set_priority (int new_priority) 
 {
+  enum intr_level old_level;
+	old_level = intr_disable();
+	
   struct thread *t = thread_current();
   t->priority = new_priority;
   thread_recalculate_effective_priority(t);
+  intr_set_level (old_level);
   thread_yield();
 }
 
-/* Recalculates the thread's effective priority */
+/* Recalculates the thread's effective priority based on its priority and the greatest priority amongst donor threads */
 void thread_recalculate_effective_priority(struct thread *t) {
   struct thread *donor;
   donor = list_entry (list_begin(&t->donors_list), struct thread, donor_elem);
@@ -398,8 +402,8 @@ void thread_donate_priority (struct thread *donor, struct thread *receiver, int 
   }
 }
 
-/* Recalculates the thread priority just before it releases the lock. */ /* ADDED BY US */
-void thread_calculate_effective_priority(struct lock *loc){
+/* Recalculates the thread priority just before it releases the lock. */
+void thread_release_donations(struct lock *loc){
  
   ASSERT (intr_get_level () == INTR_OFF);
 
@@ -557,7 +561,7 @@ init_thread (struct thread *t, const char *name, int nice, int priority)
   t->magic = THREAD_MAGIC;
   t->priority = priority;
   t->effective_priority = priority;
-  list_init(&t->donors_list);		/*ADDED BY US */
+  list_init(&t->donors_list);
   
   old_level = intr_disable ();
   
@@ -580,7 +584,7 @@ alloc_frame (struct thread *t, size_t size)
 }
 
 
-/* Compare the two given threads to see if a's effective priority is higher than b's *//* ADDED BY US*/
+/* Compare the two given threads to see if a's effective priority is higher than b's */
 bool max_effective_priority_thread(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED){
      struct thread *t_a = list_entry (a, struct thread, elem);
      struct thread *t_b = list_entry (b, struct thread, elem);
