@@ -418,29 +418,20 @@ thread_set_priority (int new_priority)
   thread_yield();
 }
 
-
+/* Given a donor thread, and a receiver thread, donate the donor thread's priority to the reciever thread. Allow nested donation if given depth is less than MAX_DEPTH */
 void thread_donate_priority (struct thread *donor, struct thread *receiver, int depth) { // To donate priority to a thread:
-  struct thread *d = donor;
-  struct thread *r = receiver;
-  struct lock *loc = d->lock_waiting_on;
   ASSERT (intr_get_level () == INTR_OFF); // Interrupts must be off
-  
-  while (loc != NULL && r->effective_priority < d->effective_priority && depth < MAX_DEPTH) {
-    ASSERT (d != r); // Donor must not be donating to itself
-    list_try_remove(&d->donor_elem);
-    list_insert_ordered(&r->donors_list, &d->donor_elem, &max_effective_priority_thread, NULL); // Put donor in the list of threads donating to reciever
-    r->effective_priority = d->effective_priority; // Give the donating thread's priority to the recieving thread, unless it already has higher priority than us
-    if (r->status == THREAD_READY) { // If the recieving thread is ready to run...
-      list_remove(&r->elem); // ... remove it from the ready list and put it back on in its new position
-      list_insert_ordered(&ready_list, &r->elem, &max_effective_priority_thread, NULL);
-    }
+  ASSERT (donor != receiver); // Donor must not be donating to itself
+  list_try_remove(&donor->donor_elem);
+  list_insert_ordered(&receiver->donors_list, &donor->donor_elem, &max_effective_priority_thread, NULL); // Put donor in the list of threads donating to reciever
+  receiver->effective_priority = max(donor->effective_priority, receiver->effective_priority); // Give the donating thread's priority to the recieving thread, unless it already has higher priority than us
+  if (receiver->status == THREAD_READY) { // If the recieving thread is ready to run...
+    list_remove(&receiver->elem); // ... remove it from the ready list and put it back on in its new position
+    list_insert_ordered(&ready_list, &receiver->elem, &max_effective_priority_thread, NULL);
+  }
     
-    loc = r->lock_waiting_on;
-    d = r;
-    if (loc != NULL) {
-     r = r->lock_waiting_on->holder;
-    }
-    depth++;
+  if (receiver->lock_waiting_on != NULL && depth < MAX_DEPTH) { // If the thread we are donating to is waiting on any locks, he needs to donate his new effective priority to threads he's waiting on
+    thread_donate_priority(receiver, receiver->lock_waiting_on->holder, depth + 1);
   }
 }
 

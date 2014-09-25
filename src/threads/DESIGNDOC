@@ -96,6 +96,14 @@ We chose this design because it minimizes the time required to schedule next rea
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+thread.h:
+struct thread {
+...
+  int effective_priority; // Allows us to know without looking what our priority is
+  struct lock *lock_waiting_on; // Allows threads donating to us to see if we're waiting for another lock
+  struct list donors_list; // Allows us to keep effective priority of one donor while giving up another's when we release a lock
+...
+}
 
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
@@ -105,12 +113,23 @@ We chose this design because it minimizes the time required to schedule next rea
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
+For a semaphore or a lock (loks use semaphores, so they are treated equivalently), we keep the list of threads waiting to acquire the semaphore sorted by effective priority. Then, just before we find the first thread we sort one more time (merge sort is effective on nearly-sorted lists, so this should be fairly fast).
+For a condvar, we instead sort the condvar's list of semaphores by the maximum effective priority among threads waiting on that semaphore. Then we take the semaphore with the maximum effective priority thread waiting on that semaphore, and wake up the corresponding highest-priority thread.
+We also keep the ready list sorted, and always wake up the thread with the greatest effective priority when waking up a thread.
 
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
+- First, we make sure the donor is not the receiver, and that interrupts are off.
+- Then, we remove the donor thread from any list of threads it may have been donating to, then place it in a sorted spot on the receiver's list of threads donating to it.
+  - This is necessary for the case of nested donation - the donor thread will already be on the receiving thread's donors list, and placing something onto a list it's already on causes problems. Also, it needs to be resorted in that case.
+- Then, we set the receiving thread's effective priority to the maximum of its effective priority and the effective priority of the donor thread
+- Then, if the receiving thread was on the ready list, we remove it and put it back on in its new location (the ready list needs to stay sorted).
+- Then, we check if the receiving thread was waiting on a lock. If it was, it recursively donates its new priority to the thread it was waiting on.
+- The depth variable is incremented each recursion. We don't enter the recursive call unless depth is less than the constant maximum depth.
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
+
 
 ---- SYNCHRONIZATION ----
 
@@ -122,10 +141,9 @@ We chose this design because it minimizes the time required to schedule next rea
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+We chose this design because it allows us to easily figure out what our priority should be when we relinquish donated priority. Since we keep the list of donor threads sorted, we can simply take the maximum of our priority and the effective priority of the first element of that list as our effective priority when we need to check.
+We considered a design in which locks kept track of each thread waiting on them. Our design is superior because in that design, to relinquish priority it would be necessary to look through each lock we are holding and not giving up, find the highest priority thread of each, and compare the priorities of each of those.
 
-We considered a design in which we kept the ready list sorted by effecitve priority.
-However, this design is superior because we don't want to perform n*log(n) steps 
-every 4 ticks, when thread priority is recalculated.
 
 			   SURVEY QUESTIONS
 			   ================

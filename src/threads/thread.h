@@ -23,6 +23,7 @@ typedef int tid_t;
 
 typedef int64_t intn14_t; /* An integer in the n.14 format - the rightmost 14 bits are after the decimal */ /* ADDED BY US */
 
+/* DELETE THE FOLLOWING */
 #define FPOINT_CONST 1<<14 /* Multiplication constant for n.14 integers */
 intn14_t intToIntn14(int a); /* Converts an integer into an n.14 integer */
 int intn14ToInt(intn14_t a); /* Converts an n.14 integer into an integer */
@@ -38,6 +39,7 @@ intn14_t div_n14(intn14_t a, intn14_t b); /* Divides two n.14 integers, a/b */
 #define two intToIntn14(2)
 #define four intToIntn14(4) 
 #define oneHundred intToIntn14(100)
+/* DELETE THE PREVIOUS */
 #define max(x, y) x ^ ((x ^ y) & -(x < y))
 
 /* Thread priorities. */

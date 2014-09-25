@@ -251,13 +251,21 @@ list_remove (struct list_elem *elem)
   ASSERT (is_interior (elem));
   elem->prev->next = elem->next;
   elem->next->prev = elem->prev;
-  return elem->next;
+  struct list_elem *temp = elem->next;
+  elem->next = NULL;
+  elem->prev = NULL;
+  return temp;
 }
 
+/*
+  Attempts to remove the given element fron the list it is in; returns NULL if it wasn't in a list to begin with
+*/
 struct list_elem *
 list_try_remove (struct list_elem *elem) {
   if (is_interior (elem)) {
     return list_remove(elem);
+  } else {
+    return NULL;
   }
 }
 

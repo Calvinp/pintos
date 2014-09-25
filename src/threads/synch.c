@@ -338,15 +338,6 @@ cond_wait (struct condition *cond, struct lock *lock)
   lock_acquire (lock); //Reacquire the lock we previously released
 }
 
-/* Compare two semaphores to see which one is waiting on the highest effective priority thread *//* ADDED BY US*/
-bool max_effective_priority_semaphore(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED){
-     struct semaphore_elem *s_a = list_entry (a, struct semaphore_elem, elem);
-     struct semaphore_elem *s_b = list_entry (b, struct semaphore_elem, elem);
-     struct thread *t_a = list_entry(list_begin(&s_a->semaphore.waiters), struct thread, elem);
-     struct thread *t_b = list_entry(list_begin(&s_b->semaphore.waiters), struct thread, elem);
-     return t_a->effective_priority > t_b->effective_priority;
-}
-
 
 /* If any threads are waiting on COND (protected by LOCK), then
    this function signals one of them to wake up from its wait.
@@ -384,4 +375,13 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+/* Compare two semaphores to see which one is waiting on the highest effective priority thread *//* ADDED BY US*/
+bool max_effective_priority_semaphore(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED) {
+     struct semaphore_elem *s_a = list_entry (a, struct semaphore_elem, elem);
+     struct semaphore_elem *s_b = list_entry (b, struct semaphore_elem, elem);
+     struct thread *t_a = list_entry(list_begin(&s_a->semaphore.waiters), struct thread, elem);
+     struct thread *t_b = list_entry(list_begin(&s_b->semaphore.waiters), struct thread, elem);
+     return t_a->effective_priority > t_b->effective_priority;
 }
