@@ -1,2 +1,2 @@
-pintos
+OS thread project 
 ===========
